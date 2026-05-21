@@ -56,7 +56,10 @@ app.get("/documents/:id", async (req, res) => {
     });
   }
 });
-//get uid
+
+// ==========================
+// GET BY UID
+// ==========================
 app.get("/documents/uid/:uid", async (req, res) => {
   try {
     const { data, error } = await supabase
@@ -93,6 +96,7 @@ app.post("/documents", async (req, res) => {
       remarks,
       processing_at,
       completed_at,
+      rejected_at, // เพิ่ม field นี้
     } = req.body;
 
     const { data, error } = await supabase
@@ -112,6 +116,7 @@ app.post("/documents", async (req, res) => {
           remarks,
           processing_at,
           completed_at,
+          rejected_at, // เพิ่ม field นี้
         },
       ])
       .select();
@@ -120,12 +125,12 @@ app.post("/documents", async (req, res) => {
 
     res.status(201).json(data);
   } catch (err) {
+    console.error(err);
+
     res.status(500).json({
       error: err.message,
     });
   }
-  console.log(req.body);
-  console.log(error);
 });
 
 // ==========================
@@ -133,9 +138,19 @@ app.post("/documents", async (req, res) => {
 // ==========================
 app.put("/documents/:id", async (req, res) => {
   try {
+    const updateData = {
+      ...req.body,
+    };
+
+    // ถ้า status = REJECTED และไม่มี rejected_at
+    // ให้ set เวลาอัตโนมัติ
+    if (updateData.status === "REJECTED" && !updateData.rejected_at) {
+      updateData.rejected_at = new Date().toISOString();
+    }
+
     const { data, error } = await supabase
       .from(TABLE)
-      .update(req.body)
+      .update(updateData)
       .eq("id", req.params.id)
       .select();
 
@@ -143,6 +158,8 @@ app.put("/documents/:id", async (req, res) => {
 
     res.json(data);
   } catch (err) {
+    console.error(err);
+
     res.status(500).json({
       error: err.message,
     });
